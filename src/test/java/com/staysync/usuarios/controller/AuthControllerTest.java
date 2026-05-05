@@ -7,16 +7,15 @@ import com.staysync.usuarios.dto.request.RegistroRequest;
 import com.staysync.usuarios.dto.response.AuthResponse;
 import com.staysync.usuarios.dto.response.UsuarioResponse;
 import com.staysync.usuarios.model.Usuario;
-import com.staysync.usuarios.security.JwtAuthFilter;
 import com.staysync.usuarios.service.AuthService;
 import com.staysync.usuarios.service.JwtService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -25,16 +24,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtAuthFilter.class})
+@Import(SecurityConfig.class)
 @DisplayName("AuthController - Tests de Integración Web")
 class AuthControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
 
-    @MockBean private AuthService authService;
-    @MockBean private JwtService jwtService;
-    @MockBean private UserDetailsService userDetailsService;
+    @MockitoBean private AuthService authService;
+    @MockitoBean private JwtService jwtService;
+    @MockitoBean private UserDetailsService userDetailsService;
 
     @Test
     @DisplayName("POST /auth/login - debe retornar 200 con credenciales válidas")
