@@ -42,6 +42,9 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                // /huespedes y /buscar son accesibles para RECEPCIONISTA también (método @PreAuthorize aplica)
+                .requestMatchers(HttpMethod.GET, "/api/v1/usuarios/huespedes").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                .requestMatchers(HttpMethod.GET, "/api/v1/usuarios/buscar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                 .requestMatchers(HttpMethod.GET, "/api/v1/usuarios").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

@@ -11,9 +11,13 @@ import com.staysync.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +42,72 @@ public class UsuarioService {
     }
 
     public Page<UsuarioResponse> listarTodos(Pageable pageable) {
-        return usuarioRepository.findAll(pageable).map(usuarioMapper::toResponse);
+        Pageable safePageable = (pageable != null) ? pageable : Pageable.unpaged();
+        return usuarioRepository.findAll(safePageable).map(u -> mapearSeguro(u, "listarTodos"));
+    }
+
+    public List<UsuarioResponse> listarHuespedes() {
+        log.debug("listarHuespedes: buscando todos los huéspedes activos");
+        return buscar("", "HUESPED");
+    }
+
+    public List<UsuarioResponse> buscar(String q, String rol) {
+        log.debug("buscar: q='{}', rol='{}'", q, rol);
+
+        Specification<Usuario> spec = (root, query, cb) -> cb.isTrue(root.get("activo"));
+
+        if (rol != null && !rol.isBlank()) {
+            try {
+                Usuario.Rol rolEnum = Usuario.Rol.valueOf(rol.trim().toUpperCase());
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("rol"), rolEnum));
+            } catch (IllegalArgumentException e) {
+                log.warn("buscar: rol inválido '{}' — roles válidos: {}", rol,
+                        java.util.Arrays.toString(Usuario.Rol.values()));
+                throw new IllegalArgumentException(
+                        "Rol inválido: '" + rol + "'. Valores aceptados: " +
+                        java.util.Arrays.toString(Usuario.Rol.values()));
+            }
+        }
+
+        if (q != null && !q.isBlank()) {
+            String pattern = "%" + q.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("nombre")),   pattern),
+                    cb.like(cb.lower(root.get("apellido")), pattern),
+                    cb.like(cb.lower(root.get("email")),    pattern)
+            ));
+        }
+
+        List<Usuario> resultados = usuarioRepository.findAll(spec);
+        log.debug("buscar: {} resultado(s) encontrado(s)", resultados.size());
+
+        return resultados.stream()
+                .map(u -> mapearSeguro(u, "buscar"))
+                .collect(Collectors.toList());
+    }
+
+    private UsuarioResponse mapearSeguro(Usuario u, String origen) {
+        try {
+            UsuarioResponse response = usuarioMapper.toResponse(u);
+            if (response == null) {
+                log.error("{}: mapper.toResponse retornó null para usuario id={}", origen, u.getId());
+                return UsuarioResponse.builder()
+                        .id(u.getId())
+                        .nombre(u.getNombre() != null ? u.getNombre() : "")
+                        .apellido(u.getApellido() != null ? u.getApellido() : "")
+                        .email(u.getEmail() != null ? u.getEmail() : "")
+                        .telefono(u.getTelefono())
+                        .rol(u.getRol())
+                        .activo(u.getActivo() != null ? u.getActivo() : false)
+                        .createdAt(u.getCreatedAt())
+                        .updatedAt(u.getUpdatedAt())
+                        .build();
+            }
+            return response;
+        } catch (Exception e) {
+            log.error("{}: error mapeando usuario id={}: {}", origen, u.getId(), e.getMessage(), e);
+            throw new RuntimeException("Error al procesar el usuario id=" + u.getId(), e);
+        }
     }
 
     public UsuarioResponse obtenerPorId(Long id) {

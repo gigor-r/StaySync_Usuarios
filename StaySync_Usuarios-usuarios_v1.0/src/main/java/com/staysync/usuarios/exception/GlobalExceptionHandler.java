@@ -2,11 +2,14 @@ package com.staysync.usuarios.exception;
 
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.*;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
@@ -44,6 +47,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AuthorizationDeniedException ex, WebRequest request) {
         return build(HttpStatus.FORBIDDEN, "Acceso denegado", request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        log.warn("Argumento inválido: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handlePropertyReference(PropertyReferenceException ex, WebRequest request) {
+        log.warn("Campo de ordenamiento inválido: {}", ex.getPropertyName());
+        return build(HttpStatus.BAD_REQUEST,
+                "Campo de ordenamiento inválido: '" + ex.getPropertyName() + "'", request);
+    }
+
+    @ExceptionHandler({MissingRequestHeaderException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleMissingParams(Exception ex, WebRequest request) {
+        log.warn("Parámetro faltante: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

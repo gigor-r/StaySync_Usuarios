@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/usuarios")
 @RequiredArgsConstructor
@@ -24,6 +26,22 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+
+    @GetMapping("/huespedes")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPCIONISTA')")
+    @Operation(summary = "Listar todos los huéspedes activos (uso de recepción)")
+    public ResponseEntity<List<UsuarioResponse>> listarHuespedes() {
+        return ResponseEntity.ok(usuarioService.listarHuespedes());
+    }
+
+    @GetMapping("/buscar")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPCIONISTA')")
+    @Operation(summary = "Buscar usuarios por nombre, apellido o email; filtrar por rol")
+    public ResponseEntity<List<UsuarioResponse>> buscar(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false, defaultValue = "") String rol) {
+        return ResponseEntity.ok(usuarioService.buscar(q, rol));
+    }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
